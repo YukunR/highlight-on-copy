@@ -1,5 +1,5 @@
 $Files = @(git diff --cached --name-only --diff-filter=ACMR 2>&1 |
-           Where-Object { $_ -match '\.cs$' })
+    Where-Object { $_ -match '\.cs$' })
 
 $hasError = $false
 
