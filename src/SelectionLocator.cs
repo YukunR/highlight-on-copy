@@ -146,11 +146,30 @@ internal static class SelectionLocator
                     continue;
 
                 var bounds = selected[i].Current.BoundingRectangle;
-                if (!bounds.IsEmpty && bounds.Width > 0 && bounds.Height > 0)
+
+                System.Windows.Rect uiaBounds = bounds;
+                if (ct == ControlType.TreeItem)
+                {
+                    // TreeItem.BoundingRectangle only covers the text label; extend leftward
+                    // to include the folder icon by walking up to the Tree ancestor (the nav
+                    // pane container) and using its left edge as the row's left boundary.
+                    var walker = TreeWalker.ContentViewWalker;
+                    var anc = walker.GetParent(selected[i]);
+                    while (anc != null && anc.Current.ControlType != ControlType.Tree)
+                        anc = walker.GetParent(anc);
+
+                    if (anc != null)
+                    {
+                        var tb = anc.Current.BoundingRectangle;
+                        uiaBounds = new System.Windows.Rect(tb.X, uiaBounds.Y, tb.Width, uiaBounds.Height);
+                    }
+                }
+
+                if (!uiaBounds.IsEmpty && uiaBounds.Width > 0 && uiaBounds.Height > 0)
                 {
                     rects.Add(new Rectangle(
-                        (int)bounds.X, (int)bounds.Y,
-                        (int)bounds.Width, (int)bounds.Height));
+                        (int)uiaBounds.X, (int)uiaBounds.Y,
+                        (int)uiaBounds.Width, (int)uiaBounds.Height));
                 }
             }
 
