@@ -22,13 +22,16 @@ internal sealed class ClipboardMonitor : NativeWindow, IDisposable
     private static readonly IntPtr HWND_MESSAGE = new(-3);
 
     private readonly System.Windows.Forms.Timer _delayTimer;
-    private readonly Action _onClipboardChanged;
+    private readonly Action<bool> _onClipboardChanged;
+    private bool _lastWasCtrlCX;
     private bool _disposed;
 
     /// <param name="onClipboardChanged">
     /// Callback fired ~80ms after a clipboard update. Always called on the UI thread.
+    /// The bool parameter is true when Ctrl+C or Ctrl+X was held at the moment the
+    /// clipboard was written (keyboard copy), false for programmatic or mouse-only writes.
     /// </param>
-    public ClipboardMonitor(Action onClipboardChanged)
+    public ClipboardMonitor(Action<bool> onClipboardChanged)
     {
         _onClipboardChanged = onClipboardChanged;
 
@@ -45,7 +48,7 @@ internal sealed class ClipboardMonitor : NativeWindow, IDisposable
         _delayTimer.Tick += (_, _) =>
         {
             _delayTimer.Stop();
-            _onClipboardChanged();
+            _onClipboardChanged(_lastWasCtrlCX);
         };
     }
 
@@ -53,6 +56,14 @@ internal sealed class ClipboardMonitor : NativeWindow, IDisposable
     {
         if (m.Msg == WM_CLIPBOARDUPDATE)
         {
+            // Capture keyboard state immediately before the 80ms delay, while the
+            // keys are still physically held. Used to distinguish Ctrl+C/X (keyboard
+            // copy) from programmatic clipboard writes (e.g. Explorer tab duplication).
+            bool ctrl = (NativeMethods.GetAsyncKeyState(NativeMethods.VK_CONTROL) & 0x8000) != 0;
+            bool c = (NativeMethods.GetAsyncKeyState(NativeMethods.VK_C) & 0x8000) != 0;
+            bool x = (NativeMethods.GetAsyncKeyState(NativeMethods.VK_X) & 0x8000) != 0;
+            _lastWasCtrlCX = ctrl && (c || x);
+
             // Restart the 80ms delay on every clipboard update. If the app sends
             // multiple rapid updates (e.g. a rich-text editor copying both
             // CF_RTF and CF_UNICODETEXT), we only trigger once after they settle.

@@ -29,7 +29,8 @@ internal static class SelectionLocator
     /// selections produce multiple rectangles. Never returns an empty array —
     /// Tier 4 guarantees at least the window bounding rect.
     /// </summary>
-    public static Rectangle[] GetSelectionRects(IntPtr ownerHwnd, int clipboardLineCount = 1)
+    public static Rectangle[] GetSelectionRects(IntPtr ownerHwnd, int clipboardLineCount = 1,
+        HashSet<string>? clipboardFileNames = null)
     {
         if (ownerHwnd == IntPtr.Zero)
             return Array.Empty<Rectangle>();
@@ -57,7 +58,7 @@ internal static class SelectionLocator
         }
 
         return TryTextPattern(ownerHwnd)
-            ?? TrySelectionPattern(ownerHwnd)
+            ?? TrySelectionPattern(ownerHwnd, clipboardFileNames)
             ?? TryFocusedElement(ownerHwnd)
             ?? FallbackWindowRect(ownerHwnd);
     }
@@ -109,7 +110,7 @@ internal static class SelectionLocator
     // ---- Tier 2 — SelectionItemPattern (multi-file / multi-item fix) ----
     // ---------------------------------------------------------------------
 
-    private static Rectangle[]? TrySelectionPattern(IntPtr hwnd)
+    private static Rectangle[]? TrySelectionPattern(IntPtr hwnd, HashSet<string>? clipboardFileNames)
     {
         try
         {
@@ -126,15 +127,62 @@ internal static class SelectionLocator
             var selected = root.FindAll(TreeScope.Descendants, condition);
             if (selected.Count == 0) return null;
 
+            // Explorer always marks several UI-chrome elements as selected regardless of
+            // the user's actual file selection:
+            //   RadioButton — the active view-mode button ("Details", "Tiles", …)
+            //   TabItem     — the current tab in the tab bar
+            //   TreeItem    — the current directory in the navigation pane
+            // We filter these out, with one exception: if focus is on a TreeItem the user
+            // is copying from the navigation pane, so TreeItem should be kept.
+            var focused = TryGetFocusedElement();
+            bool focusOnTreeItem = false;
+            try { focusOnTreeItem = focused?.Current.ControlType == ControlType.TreeItem; }
+            catch { }
+
             var rects = new List<Rectangle>();
             for (int i = 0; i < selected.Count; i++)
             {
+                var ct = selected[i].Current.ControlType;
+                if (ct == ControlType.RadioButton || ct == ControlType.TabItem)
+                    continue;
+                if (ct == ControlType.TreeItem && !focusOnTreeItem)
+                    continue;
+
+                // Explorer's ListView has a UIA cache delay: previously clicked files keep
+                // IsSelected=true briefly after the user selects a different file. Cross-
+                // reference with the clipboard to exclude these stale ghost entries.
+                if (clipboardFileNames != null && clipboardFileNames.Count > 0
+                    && (ct == ControlType.ListItem || ct == ControlType.DataItem || ct == ControlType.TreeItem))
+                {
+                    if (!clipboardFileNames.Contains(selected[i].Current.Name))
+                        continue;
+                }
+
                 var bounds = selected[i].Current.BoundingRectangle;
-                if (!bounds.IsEmpty && bounds.Width > 0 && bounds.Height > 0)
+                System.Windows.Rect uiaBounds = bounds;
+
+                if (ct == ControlType.TreeItem)
+                {
+                    // TreeItem.BoundingRectangle only covers the text label; extend leftward
+                    // to include the folder icon by walking up to the Tree ancestor (the nav
+                    // pane container) and using its left edge as the row's left boundary.
+                    var walker = TreeWalker.ContentViewWalker;
+                    var anc = walker.GetParent(selected[i]);
+                    while (anc != null && anc.Current.ControlType != ControlType.Tree)
+                        anc = walker.GetParent(anc);
+
+                    if (anc != null)
+                    {
+                        var tb = anc.Current.BoundingRectangle;
+                        uiaBounds = new System.Windows.Rect(tb.X, uiaBounds.Y, tb.Width, uiaBounds.Height);
+                    }
+                }
+
+                if (!uiaBounds.IsEmpty && uiaBounds.Width > 0 && uiaBounds.Height > 0)
                 {
                     rects.Add(new Rectangle(
-                        (int)bounds.X, (int)bounds.Y,
-                        (int)bounds.Width, (int)bounds.Height));
+                        (int)uiaBounds.X, (int)uiaBounds.Y,
+                        (int)uiaBounds.Width, (int)uiaBounds.Height));
                 }
             }
 

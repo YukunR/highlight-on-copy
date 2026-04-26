@@ -5,6 +5,7 @@
 //   AddClipboardFormatListener → WM_CLIPBOARDUPDATE → 80ms timer →
 //   RateLimiter.ShouldTrigger() → SelectionLocator.GetSelectionRects() →
 //   GlowOverlay.ShowOver()
+using System.IO;
 using System.Windows.Forms;
 
 namespace HighlightOnCopy;
@@ -14,6 +15,11 @@ internal sealed class AppContext : ApplicationContext
     private readonly ClipboardMonitor _clipboardMonitor;
     private readonly RateLimiter _rateLimiter = new();
     private readonly TrayIcon _trayIcon;
+
+    // Last CF_HDROP file list shown in the overlay (sorted). Used to suppress
+    // duplicate file-copy highlights caused by Explorer re-writing the clipboard
+    // during tab operations (duplicate tab, tab switch) without Ctrl+C/X.
+    private IReadOnlyList<string>? _lastShownHdrop;
 
     public AppContext()
     {
@@ -25,8 +31,9 @@ internal sealed class AppContext : ApplicationContext
     // ---- Clipboard event handler ----
     // ---------------------------------
     // Called on the UI thread, ~80ms after WM_CLIPBOARDUPDATE.
+    // wasCtrlCX: true when Ctrl+C or Ctrl+X was held at clipboard-write time.
 
-    private void OnClipboardChanged()
+    private void OnClipboardChanged(bool wasCtrlCX)
     {
         // ---- Rate-limit + idle check ----
         if (!_rateLimiter.ShouldTrigger())
@@ -39,6 +46,43 @@ internal sealed class AppContext : ApplicationContext
         bool hasFiles = NativeMethods.IsClipboardFormatAvailable(NativeMethods.CF_HDROP);
         if (!hasText && !hasFiles)
             return;
+
+        // ---- Read file list once ----
+        // Build both the sorted path list (for dedup + _lastShownHdrop) and a name set
+        // (with and without extension) for SelectionLocator to filter stale UIA entries.
+        List<string>? currentFiles = null;
+        HashSet<string>? clipboardFileNames = null;
+        if (hasFiles)
+        {
+            try
+            {
+                var drop = Clipboard.GetFileDropList();
+                currentFiles = new List<string>(drop.Count);
+                clipboardFileNames = new HashSet<string>(drop.Count * 2, StringComparer.OrdinalIgnoreCase);
+                foreach (string? path in drop)
+                {
+                    if (path == null) continue;
+                    currentFiles.Add(path);
+                    clipboardFileNames.Add(Path.GetFileName(path));
+                    clipboardFileNames.Add(Path.GetFileNameWithoutExtension(path));
+                }
+                currentFiles.Sort(StringComparer.OrdinalIgnoreCase);
+                if (clipboardFileNames.Count == 0) clipboardFileNames = null;
+            }
+            catch { currentFiles = null; clipboardFileNames = null; }
+        }
+
+        // ---- Duplicate file-copy suppression ----
+        // Explorer re-writes CF_HDROP with the current selection during tab operations
+        // (duplicate tab, tab switch) without any Ctrl+C/X keystroke. If the file list
+        // is identical to the last overlay we showed and no keyboard copy was detected,
+        // treat this as an internal write and skip.
+        if (hasFiles && !wasCtrlCX && currentFiles != null)
+        {
+            if (_lastShownHdrop != null && currentFiles.SequenceEqual(
+                    _lastShownHdrop, StringComparer.OrdinalIgnoreCase))
+                return;
+        }
 
         // ---- Source window ----
         // Strategy: use GetForegroundWindow() captured here (≈80ms after the
@@ -93,7 +137,7 @@ internal sealed class AppContext : ApplicationContext
         Rectangle[] rects;
         try
         {
-            rects = SelectionLocator.GetSelectionRects(targetHwnd, clipboardLineCount);
+            rects = SelectionLocator.GetSelectionRects(targetHwnd, clipboardLineCount, clipboardFileNames);
         }
         catch
         {
@@ -107,6 +151,10 @@ internal sealed class AppContext : ApplicationContext
 
         // ---- Show glow overlay ----
         GlowOverlay.ShowOver(rects);
+
+        // Record the file list so we can suppress Explorer's internal re-writes
+        // (tab duplication, etc.) that repeat the same CF_HDROP without Ctrl+C/X.
+        _lastShownHdrop = hasFiles ? currentFiles : null;
     }
 
     protected override void Dispose(bool disposing)
