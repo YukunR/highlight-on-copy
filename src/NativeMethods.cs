@@ -66,6 +66,17 @@ internal static class NativeMethods
     [DllImport("kernel32.dll")]
     internal static extern uint GetTickCount();
 
+    /// <summary>
+    /// Returns the async state of a virtual key. The high-order bit (0x8000) is set
+    /// if the key is currently down at the moment of the call.
+    /// </summary>
+    [DllImport("user32.dll")]
+    internal static extern short GetAsyncKeyState(int vKey);
+
+    internal const int VK_CONTROL = 0x11;
+    internal const int VK_C = 0x43;
+    internal const int VK_X = 0x58;
+
     // ---- DPI ----
 
     /// <summary>

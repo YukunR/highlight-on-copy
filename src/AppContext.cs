@@ -15,6 +15,11 @@ internal sealed class AppContext : ApplicationContext
     private readonly RateLimiter _rateLimiter = new();
     private readonly TrayIcon _trayIcon;
 
+    // Last CF_HDROP file list shown in the overlay (sorted). Used to suppress
+    // duplicate file-copy highlights caused by Explorer re-writing the clipboard
+    // during tab operations (duplicate tab, tab switch) without Ctrl+C/X.
+    private IReadOnlyList<string>? _lastShownHdrop;
+
     public AppContext()
     {
         _trayIcon = new TrayIcon(Application.Exit);
@@ -25,8 +30,9 @@ internal sealed class AppContext : ApplicationContext
     // ---- Clipboard event handler ----
     // ---------------------------------
     // Called on the UI thread, ~80ms after WM_CLIPBOARDUPDATE.
+    // wasCtrlCX: true when Ctrl+C or Ctrl+X was held at clipboard-write time.
 
-    private void OnClipboardChanged()
+    private void OnClipboardChanged(bool wasCtrlCX)
     {
         // ---- Rate-limit + idle check ----
         if (!_rateLimiter.ShouldTrigger())
@@ -39,6 +45,29 @@ internal sealed class AppContext : ApplicationContext
         bool hasFiles = NativeMethods.IsClipboardFormatAvailable(NativeMethods.CF_HDROP);
         if (!hasText && !hasFiles)
             return;
+
+        // ---- Duplicate file-copy suppression ----
+        // Explorer re-writes CF_HDROP with the current selection during tab operations
+        // (duplicate tab, tab switch) without any Ctrl+C/X keystroke. If the file list
+        // is identical to the last overlay we showed and no keyboard copy was detected,
+        // treat this as an internal write and skip.
+        if (hasFiles && !wasCtrlCX)
+        {
+            List<string> currentFiles;
+            try
+            {
+                var drop = Clipboard.GetFileDropList();
+                currentFiles = new List<string>(drop.Count);
+                foreach (string? f in drop)
+                    if (f != null) currentFiles.Add(f);
+                currentFiles.Sort(StringComparer.OrdinalIgnoreCase);
+            }
+            catch { currentFiles = []; }
+
+            if (_lastShownHdrop != null && currentFiles.SequenceEqual(
+                    _lastShownHdrop, StringComparer.OrdinalIgnoreCase))
+                return;
+        }
 
         // ---- Source window ----
         // Strategy: use GetForegroundWindow() captured here (≈80ms after the
@@ -107,6 +136,26 @@ internal sealed class AppContext : ApplicationContext
 
         // ---- Show glow overlay ----
         GlowOverlay.ShowOver(rects);
+
+        // Record the file list so we can suppress Explorer's internal re-writes
+        // (tab duplication, etc.) that repeat the same CF_HDROP without Ctrl+C/X.
+        if (hasFiles)
+        {
+            try
+            {
+                var drop = Clipboard.GetFileDropList();
+                var saved = new List<string>(drop.Count);
+                foreach (string? f in drop)
+                    if (f != null) saved.Add(f);
+                saved.Sort(StringComparer.OrdinalIgnoreCase);
+                _lastShownHdrop = saved;
+            }
+            catch { _lastShownHdrop = null; }
+        }
+        else
+        {
+            _lastShownHdrop = null;
+        }
     }
 
     protected override void Dispose(bool disposing)
