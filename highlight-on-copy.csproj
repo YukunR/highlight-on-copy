@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- dotnet tool requires OutputType=Exe (console entry point).
+         The console window is immediately freed via FreeConsole() in Program.cs. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- UseWPF is needed only to reference UIAutomationClient.dll (System.Windows.Automation).
+         We never create any WPF windows — all UI is via WinForms. -->
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>HighlightOnCopy</AssemblyName>
+    <RootNamespace>HighlightOnCopy</RootNamespace>
+  </PropertyGroup>
+
+  <!-- ── dotnet tool packaging ──────────────────────────────────────────────
+       Install:   dotnet tool install -g highlight-on-copy
+       Uninstall: dotnet tool uninstall -g highlight-on-copy
+       Run:       highlight-on-copy   (or just let it start with Windows)
+       Publish:   dotnet pack -c Release → upload .nupkg to NuGet.org
+  -->
+  <PropertyGroup>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>highlight-on-copy</ToolCommandName>
+    <PackageId>HighlightOnCopy</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>highlight-on-copy contributors</Authors>
+    <Description>System-wide visual feedback when copying on Windows. Highlights the copied selection with a soft glow that fades out, so you always know the copy succeeded.</Description>
+    <PackageTags>windows;clipboard;copy;highlight;tray;ux</PackageTags>
+    <PackageProjectUrl>https://github.com/YukunR/highlight-on-copy</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/YukunR/highlight-on-copy</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+</Project>
