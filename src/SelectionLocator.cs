@@ -152,7 +152,7 @@ internal static class SelectionLocator
                 // IsSelected=true briefly after the user selects a different file. Cross-
                 // reference with the clipboard to exclude these stale ghost entries.
                 if (clipboardFileNames != null && clipboardFileNames.Count > 0
-                    && (ct == ControlType.ListItem || ct == ControlType.DataItem))
+                    && (ct == ControlType.ListItem || ct == ControlType.DataItem || ct == ControlType.TreeItem))
                 {
                     if (!clipboardFileNames.Contains(selected[i].Current.Name))
                         continue;
