@@ -1,0 +1,8 @@
+# All text files use LF, overriding core.autocrlf on Windows
+* text=auto eol=lf
+
+# Binary files: no line ending conversion
+*.exe    binary
+*.dll    binary
+*.pdb    binary
+*.nupkg  binary
