@@ -29,7 +29,8 @@ internal static class SelectionLocator
     /// selections produce multiple rectangles. Never returns an empty array —
     /// Tier 4 guarantees at least the window bounding rect.
     /// </summary>
-    public static Rectangle[] GetSelectionRects(IntPtr ownerHwnd, int clipboardLineCount = 1)
+    public static Rectangle[] GetSelectionRects(IntPtr ownerHwnd, int clipboardLineCount = 1,
+        HashSet<string>? clipboardFileNames = null)
     {
         if (ownerHwnd == IntPtr.Zero)
             return Array.Empty<Rectangle>();
@@ -57,7 +58,7 @@ internal static class SelectionLocator
         }
 
         return TryTextPattern(ownerHwnd)
-            ?? TrySelectionPattern(ownerHwnd)
+            ?? TrySelectionPattern(ownerHwnd, clipboardFileNames)
             ?? TryFocusedElement(ownerHwnd)
             ?? FallbackWindowRect(ownerHwnd);
     }
@@ -109,7 +110,7 @@ internal static class SelectionLocator
     // ---- Tier 2 — SelectionItemPattern (multi-file / multi-item fix) ----
     // ---------------------------------------------------------------------
 
-    private static Rectangle[]? TrySelectionPattern(IntPtr hwnd)
+    private static Rectangle[]? TrySelectionPattern(IntPtr hwnd, HashSet<string>? clipboardFileNames)
     {
         try
         {
@@ -134,7 +135,9 @@ internal static class SelectionLocator
             // We filter these out, with one exception: if focus is on a TreeItem the user
             // is copying from the navigation pane, so TreeItem should be kept.
             var focused = TryGetFocusedElement();
-            bool focusOnTreeItem = focused?.Current.ControlType == ControlType.TreeItem;
+            bool focusOnTreeItem = false;
+            try { focusOnTreeItem = focused?.Current.ControlType == ControlType.TreeItem; }
+            catch { }
 
             var rects = new List<Rectangle>();
             for (int i = 0; i < selected.Count; i++)
@@ -145,9 +148,19 @@ internal static class SelectionLocator
                 if (ct == ControlType.TreeItem && !focusOnTreeItem)
                     continue;
 
-                var bounds = selected[i].Current.BoundingRectangle;
+                // Explorer's ListView has a UIA cache delay: previously clicked files keep
+                // IsSelected=true briefly after the user selects a different file. Cross-
+                // reference with the clipboard to exclude these stale ghost entries.
+                if (clipboardFileNames != null && clipboardFileNames.Count > 0
+                    && (ct == ControlType.ListItem || ct == ControlType.DataItem))
+                {
+                    if (!clipboardFileNames.Contains(selected[i].Current.Name))
+                        continue;
+                }
 
+                var bounds = selected[i].Current.BoundingRectangle;
                 System.Windows.Rect uiaBounds = bounds;
+
                 if (ct == ControlType.TreeItem)
                 {
                     // TreeItem.BoundingRectangle only covers the text label; extend leftward
