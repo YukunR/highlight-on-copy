@@ -1,32 +1,14 @@
 {
-  "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
   "tasks": [
     {
-      "name": "dotnet-format",
+      "name": "format-staged",
       "group": "pre-commit",
-      "command": "dotnet",
+      "command": "powershell",
       "args": [
-        "format",
-        "highlight-on-copy.sln",
-        "--no-restore",
-        "--include",
-        "${staged}"
-      ],
-      "include": [
-        "**/*.cs"
-      ],
-      "output": "always"
-    },
-    {
-      "name": "restage",
-      "group": "pre-commit",
-      "command": "git",
-      "args": [
-        "add",
-        "${staged}"
-      ],
-      "include": [
-        "**/*.cs"
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".husky/format-staged.ps1"
       ],
       "output": "always"
     },
@@ -38,12 +20,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        ".husky/check-comment-dividers.ps1",
-        "--Files",
-        "${staged}"
-      ],
-      "include": [
-        "**/*.cs"
+        ".husky/check-comment-dividers.ps1"
       ],
       "output": "always"
     }
