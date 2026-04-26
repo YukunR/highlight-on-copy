@@ -126,9 +126,25 @@ internal static class SelectionLocator
             var selected = root.FindAll(TreeScope.Descendants, condition);
             if (selected.Count == 0) return null;
 
+            // Explorer always marks several UI-chrome elements as selected regardless of
+            // the user's actual file selection:
+            //   RadioButton — the active view-mode button ("Details", "Tiles", …)
+            //   TabItem     — the current tab in the tab bar
+            //   TreeItem    — the current directory in the navigation pane
+            // We filter these out, with one exception: if focus is on a TreeItem the user
+            // is copying from the navigation pane, so TreeItem should be kept.
+            var focused = TryGetFocusedElement();
+            bool focusOnTreeItem = focused?.Current.ControlType == ControlType.TreeItem;
+
             var rects = new List<Rectangle>();
             for (int i = 0; i < selected.Count; i++)
             {
+                var ct = selected[i].Current.ControlType;
+                if (ct == ControlType.RadioButton || ct == ControlType.TabItem)
+                    continue;
+                if (ct == ControlType.TreeItem && !focusOnTreeItem)
+                    continue;
+
                 var bounds = selected[i].Current.BoundingRectangle;
                 if (!bounds.IsEmpty && bounds.Width > 0 && bounds.Height > 0)
                 {
