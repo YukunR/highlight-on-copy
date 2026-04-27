@@ -1,16 +1,39 @@
 // Program.cs — Entry point.
+using System.IO.Pipes;
+using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace HighlightOnCopy;
 
 internal static class Program
 {
+    internal const string MutexName = "Global\\HighlightOnCopy";
+    internal const string PipeName = "HighlightOnCopy";
+
     [STAThread]
     static void Main()
     {
         // When launched as a dotnet tool, dotnet.exe attaches a console window.
         // Free it immediately so the app appears as a pure tray application.
         NativeMethods.FreeConsole();
+
+        // Single-instance guard: only one copy may run per user session.
+        // The mutex is held for the lifetime of Application.Run() below.
+        bool createdNew;
+        using var mutex = new Mutex(initiallyOwned: true, MutexName, out createdNew);
+        if (!createdNew)
+        {
+            // Another instance is already running — tell it to show its settings window.
+            try
+            {
+                using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+                pipe.Connect(2000);
+                pipe.Write(Encoding.UTF8.GetBytes("SHOW_SETTINGS"));
+            }
+            catch { /* running instance may be starting up; fail silently */ }
+            return;
+        }
 
         // Make the process DPI-aware so that GetWindowRect and UI Automation
         // bounding rectangles are in physical pixels. Without this, on a 150%
