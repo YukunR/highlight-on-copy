@@ -6,6 +6,9 @@
 //   RateLimiter.ShouldTrigger() → SelectionLocator.GetSelectionRects() →
 //   GlowOverlay.ShowOver()
 using System.IO;
+using System.IO.Pipes;
+using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace HighlightOnCopy;
@@ -15,16 +18,58 @@ internal sealed class AppContext : ApplicationContext
     private readonly ClipboardMonitor _clipboardMonitor;
     private readonly RateLimiter _rateLimiter = new();
     private readonly TrayIcon _trayIcon;
+    private readonly Control _uiInvoker = new();
+    private readonly CancellationTokenSource _pipeCts = new();
+    private bool _isPaused;
+    private SettingsWindow? _settingsWindow;
 
     // Last CF_HDROP file list shown in the overlay (sorted). Used to suppress
     // duplicate file-copy highlights caused by Explorer re-writing the clipboard
     // during tab operations (duplicate tab, tab switch) without Ctrl+C/X.
     private IReadOnlyList<string>? _lastShownHdrop;
 
+    public bool IsPaused => _isPaused;
+
     public AppContext()
     {
-        _trayIcon = new TrayIcon(Application.Exit);
+        _uiInvoker.CreateControl();   // forces HWND creation before Application.Run()
+        _trayIcon = new TrayIcon(Application.Exit, ShowSettingsWindow, TogglePause);
         _clipboardMonitor = new ClipboardMonitor(OnClipboardChanged);
+        _ = RunPipeServerAsync(_pipeCts.Token);
+    }
+
+    public void TogglePause()
+    {
+        _isPaused = !_isPaused;
+        _trayIcon.UpdatePauseState(_isPaused);
+        _settingsWindow?.UpdatePauseState(_isPaused);
+    }
+
+    public void ShowSettingsWindow()
+    {
+        _settingsWindow ??= new SettingsWindow(this);
+        _settingsWindow.Show();
+        _settingsWindow.Activate();
+    }
+
+    private async Task RunPipeServerAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                using var server = new NamedPipeServerStream(
+                    Program.PipeName, PipeDirection.In, maxNumberOfServerInstances: 1,
+                    PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                await server.WaitForConnectionAsync(ct);
+                var buf = new byte[64];
+                int n = await server.ReadAsync(buf.AsMemory(), ct);
+                if (Encoding.UTF8.GetString(buf, 0, n) == "SHOW_SETTINGS")
+                    _uiInvoker.BeginInvoke(ShowSettingsWindow);
+            }
+            catch (OperationCanceledException) { return; }
+            catch (IOException) { /* transient — loop restarts */ }
+        }
     }
 
     // ---------------------------------
@@ -35,6 +80,8 @@ internal sealed class AppContext : ApplicationContext
 
     private void OnClipboardChanged(bool wasCtrlCX)
     {
+        if (_isPaused) return;
+
         // ---- Rate-limit + idle check ----
         if (!_rateLimiter.ShouldTrigger())
             return;
@@ -161,6 +208,10 @@ internal sealed class AppContext : ApplicationContext
     {
         if (disposing)
         {
+            _pipeCts.Cancel();
+            _pipeCts.Dispose();
+            _settingsWindow?.CloseForReal();
+            _uiInvoker.Dispose();
             _clipboardMonitor.Dispose();
             _trayIcon.Dispose();
         }

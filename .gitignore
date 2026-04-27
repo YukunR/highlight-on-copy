@@ -42,3 +42,8 @@ Thumbs.db
 *.log
 TODO.md
 BUGS.md
+
+# icon files
+highlight_on_copy_icon.ai
+highlight_on_copy_icon.png
+highlight_on_copy_icon.svg
