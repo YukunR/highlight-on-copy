@@ -8,6 +8,7 @@ internal sealed class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _notifyIcon;
     private readonly ToolStripMenuItem _pauseItem;
+    private readonly Icon? _ownedIcon;
 
     public TrayIcon(Action onExit, Action onShowSettings, Action onTogglePause)
     {
@@ -22,11 +23,10 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", image: null, onClick: (_, _) => onExit());
 
+        _ownedIcon = LoadAppIcon();
         _notifyIcon = new NotifyIcon
         {
-            // Use a built-in system icon as a placeholder.
-            // Replace with a custom .ico resource before release.
-            Icon = SystemIcons.Information,
+            Icon = _ownedIcon ?? SystemIcons.Information,
             Text = "Highlight on Copy — running",
             Visible = true,
             ContextMenuStrip = menu,
@@ -34,6 +34,13 @@ internal sealed class TrayIcon : IDisposable
 
         // Double-clicking opens the settings window.
         _notifyIcon.DoubleClick += (_, _) => onShowSettings();
+    }
+
+    private static Icon? LoadAppIcon()
+    {
+        using var stream = typeof(TrayIcon).Assembly
+            .GetManifestResourceStream("HighlightOnCopy.highlight-on-copy.ico");
+        return stream is null ? null : new Icon(stream);
     }
 
     public void UpdatePauseState(bool isPaused)
@@ -49,5 +56,6 @@ internal sealed class TrayIcon : IDisposable
         _notifyIcon.Visible = false;
         _notifyIcon.ContextMenuStrip?.Dispose();
         _notifyIcon.Dispose();
+        _ownedIcon?.Dispose();
     }
 }
