@@ -1,4 +1,5 @@
 // Program.cs — Entry point.
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
 using System.Threading;
@@ -8,8 +9,11 @@ namespace HighlightOnCopy;
 
 internal static class Program
 {
-    internal const string MutexName = "Global\\HighlightOnCopy";
-    internal const string PipeName = "HighlightOnCopy";
+    // Session-scoped so that each user on a multi-session (RDS/fast-switch) host
+    // gets an independent instance guard and IPC channel.
+    private static readonly int _sessionId = Process.GetCurrentProcess().SessionId;
+    internal static readonly string MutexName = $"Local\\HighlightOnCopy-{_sessionId}";
+    internal static readonly string PipeName = $"HighlightOnCopy-{_sessionId}";
 
     [STAThread]
     static void Main()
