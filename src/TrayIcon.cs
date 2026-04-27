@@ -1,4 +1,4 @@
-// TrayIcon.cs — System-tray notification icon with a minimal right-click menu.
+// TrayIcon.cs — System-tray notification icon with a right-click menu.
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -7,13 +7,18 @@ namespace HighlightOnCopy;
 internal sealed class TrayIcon : IDisposable
 {
     private readonly NotifyIcon _notifyIcon;
+    private readonly ToolStripMenuItem _pauseItem;
 
-    public TrayIcon(Action onExit)
+    public TrayIcon(Action onExit, Action onShowSettings, Action onTogglePause)
     {
+        _pauseItem = new ToolStripMenuItem("Pause", image: null, onClick: (_, _) => onTogglePause());
+
         var menu = new ContextMenuStrip();
-        // Title item (non-clickable header)
         var title = new ToolStripMenuItem("Highlight on Copy") { Enabled = false };
         menu.Items.Add(title);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Settings…", image: null, onClick: (_, _) => onShowSettings());
+        menu.Items.Add(_pauseItem);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Exit", image: null, onClick: (_, _) => onExit());
 
@@ -27,8 +32,16 @@ internal sealed class TrayIcon : IDisposable
             ContextMenuStrip = menu,
         };
 
-        // Double-clicking the tray icon also exits (convenient during development).
-        _notifyIcon.DoubleClick += (_, _) => onExit();
+        // Double-clicking opens the settings window.
+        _notifyIcon.DoubleClick += (_, _) => onShowSettings();
+    }
+
+    public void UpdatePauseState(bool isPaused)
+    {
+        _pauseItem.Text = isPaused ? "Resume" : "Pause";
+        _notifyIcon.Text = isPaused
+            ? "Highlight on Copy — paused"
+            : "Highlight on Copy — running";
     }
 
     public void Dispose()
