@@ -100,6 +100,18 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool FreeConsole();
 
+    // ---- DWM (Desktop Window Manager) ----
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    /// <summary>Requests a dark title bar on Windows 10 20H1+ / Windows 11. Fails silently on older builds.</summary>
+    internal static void TrySetDarkTitleBar(IntPtr hwnd)
+    {
+        int dark = 1;
+        DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, ref dark, sizeof(int));
+    }
+
     // ---- Structs ----
 
     [StructLayout(LayoutKind.Sequential)]
