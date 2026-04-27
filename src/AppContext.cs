@@ -210,6 +210,7 @@ internal sealed class AppContext : ApplicationContext
         {
             _pipeCts.Cancel();
             _pipeCts.Dispose();
+            _settingsWindow?.CloseForReal();
             _uiInvoker.Dispose();
             _clipboardMonitor.Dispose();
             _trayIcon.Dispose();
