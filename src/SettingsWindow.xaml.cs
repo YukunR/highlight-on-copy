@@ -7,6 +7,16 @@ namespace HighlightOnCopy;
 
 internal partial class SettingsWindow : Window
 {
+    private static readonly SolidColorBrush RunningBrush = MakeBrush(0x4C, 0xAF, 0x50);
+    private static readonly SolidColorBrush PausedBrush = MakeBrush(0xFF, 0x98, 0x00);
+
+    private static SolidColorBrush MakeBrush(byte r, byte g, byte b)
+    {
+        var brush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+
     private readonly AppContext _appContext;
     private bool _isLoading;
     private bool _reallyClose;
@@ -28,9 +38,7 @@ internal partial class SettingsWindow : Window
 
     internal void UpdatePauseState(bool isPaused)
     {
-        StatusDot.Fill = isPaused
-            ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x98, 0x00))
-            : new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x4C, 0xAF, 0x50));
+        StatusDot.Fill = isPaused ? PausedBrush : RunningBrush;
         TogglePauseButton.Content = isPaused ? "恢复" : "暂停";
     }
 
