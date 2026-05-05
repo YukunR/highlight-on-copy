@@ -38,27 +38,8 @@ Download `HighlightOnCopy.exe` from the [latest release](https://github.com/Yuku
 > To run it anyway, choose one of:
 > 1. Right-click the exe → **Properties** → check **Unblock** → OK, then run
 > 2. Click **More info → Run anyway** on the SmartScreen prompt
-> 3. Use the `dotnet tool` method below (no warning)
 
 To launch automatically on login, place a shortcut to the exe in `shell:startup`, or add it to Task Scheduler.
-
-### Via dotnet tool
-
-Requires [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
-
-```sh
-# Install
-dotnet tool install -g HighlightOnCopy
-
-# Run (if not starting automatically)
-highlight-on-copy
-
-# Uninstall
-dotnet tool uninstall -g HighlightOnCopy
-```
-
-To launch automatically on login, add `highlight-on-copy` to your Windows startup items
-(e.g. `shell:startup` shortcut or Task Scheduler).
 
 ### Build from Source
 

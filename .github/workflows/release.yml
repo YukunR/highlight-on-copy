@@ -42,19 +42,9 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:Version=${{ steps.version.outputs.value }}
 
-      - name: Pack NuGet
-        run: dotnet pack -c Release -p:Version=${{ steps.version.outputs.value }}
-
       - name: Create GitHub Release and upload exe
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'push'
         with:
           files: bin/Release/net10.0-windows/win-x64/publish/HighlightOnCopy.exe
           generate_release_notes: true
-
-      - name: Push to NuGet.org
-        run: >
-          dotnet nuget push
-          bin/Release/HighlightOnCopy.${{ steps.version.outputs.value }}.nupkg
-          --api-key ${{ secrets.NUGET_API_KEY }}
-          --source https://api.nuget.org/v3/index.json

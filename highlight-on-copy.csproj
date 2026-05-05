@@ -21,24 +21,4 @@
     <EmbeddedResource Include="highlight-on-copy.ico" />
   </ItemGroup>
 
-  <!-- ── dotnet tool packaging ──────────────────────────────────────────────
-       Install:   dotnet tool install -g highlight-on-copy
-       Uninstall: dotnet tool uninstall -g highlight-on-copy
-       Run:       highlight-on-copy   (or just let it start with Windows)
-       Publish:   dotnet pack -c Release → upload .nupkg to NuGet.org
-  -->
-  <PropertyGroup>
-    <PackAsTool>true</PackAsTool>
-    <ToolCommandName>highlight-on-copy</ToolCommandName>
-    <PackageId>HighlightOnCopy</PackageId>
-    <Version>0.1.0</Version>
-    <Authors>highlight-on-copy contributors</Authors>
-    <Description>System-wide visual feedback when copying on Windows. Highlights the copied selection with a soft glow that fades out, so you always know the copy succeeded.</Description>
-    <PackageTags>windows;clipboard;copy;highlight;tray;ux</PackageTags>
-    <PackageProjectUrl>https://github.com/YukunR/highlight-on-copy</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/YukunR/highlight-on-copy</RepositoryUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-  </PropertyGroup>
-
 </Project>
