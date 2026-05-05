@@ -181,10 +181,10 @@ internal sealed class AppContext : ApplicationContext
         // fast (<10ms for native apps). If an app is slow to respond, this
         // will block the UI briefly — acceptable for MVP; a Task.Run wrapper
         // with timeout can be added in a future iteration.
-        Rectangle[] rects;
+        SelectionResult result;
         try
         {
-            rects = SelectionLocator.GetSelectionRects(targetHwnd, clipboardLineCount, clipboardFileNames);
+            result = SelectionLocator.GetSelectionRects(targetHwnd, clipboardLineCount, clipboardFileNames);
         }
         catch
         {
@@ -193,11 +193,17 @@ internal sealed class AppContext : ApplicationContext
             return;
         }
 
-        if (rects.Length == 0)
+        if (result.Rects.Length == 0)
             return;
 
-        // ---- Show glow overlay ----
-        GlowOverlay.ShowOver(rects);
+        // ---- Show visual feedback ----
+        // Tier 4 (window bounding rect): show a small "✓ Copied" pill near the cursor
+        // instead of flashing the entire window, which is visually jarring.
+        // Tier 1/2/3 (precise selection): show the blue glow over the exact selection.
+        if (result.Tier == SelectionTier.WindowFallback)
+            CopiedToast.ShowNearCursor();
+        else
+            GlowOverlay.ShowOver(result.Rects);
 
         // Record the file list so we can suppress Explorer's internal re-writes
         // (tab duplication, etc.) that repeat the same CF_HDROP without Ctrl+C/X.

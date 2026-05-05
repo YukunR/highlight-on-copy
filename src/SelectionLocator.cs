@@ -21,6 +21,10 @@ using System.Windows.Automation;
 
 namespace HighlightOnCopy;
 
+internal enum SelectionTier { Precise, WindowFallback }
+
+internal readonly record struct SelectionResult(Rectangle[] Rects, SelectionTier Tier);
+
 internal static class SelectionLocator
 {
     /// <summary>
@@ -29,11 +33,11 @@ internal static class SelectionLocator
     /// selections produce multiple rectangles. Never returns an empty array —
     /// Tier 4 guarantees at least the window bounding rect.
     /// </summary>
-    public static Rectangle[] GetSelectionRects(IntPtr ownerHwnd, int clipboardLineCount = 1,
+    public static SelectionResult GetSelectionRects(IntPtr ownerHwnd, int clipboardLineCount = 1,
         HashSet<string>? clipboardFileNames = null)
     {
         if (ownerHwnd == IntPtr.Zero)
-            return Array.Empty<Rectangle>();
+            return new SelectionResult(Array.Empty<Rectangle>(), SelectionTier.Precise);
 
         // Electron/Chromium apps (VSCode, Slack, etc.): Tier 2 misfires on the active
         // TabItem and Tier 3 returns a full editor-line rect instead of the selection.
@@ -53,14 +57,17 @@ internal static class SelectionLocator
             var visibleHwnd = NativeMethods.GetForegroundWindow();
             var rects = TryTextPattern(ownerHwnd);
             if (rects != null && ElectronRectsLookValid(rects, visibleHwnd, clipboardLineCount))
-                return rects;
+                return new SelectionResult(rects, SelectionTier.Precise);
             return FallbackWindowRect(visibleHwnd != IntPtr.Zero ? visibleHwnd : ownerHwnd);
         }
 
-        return TryTextPattern(ownerHwnd)
-            ?? TrySelectionPattern(ownerHwnd, clipboardFileNames)
-            ?? TryFocusedElement(ownerHwnd)
-            ?? FallbackWindowRect(ownerHwnd);
+        var t1 = TryTextPattern(ownerHwnd);
+        if (t1 != null) return new SelectionResult(t1, SelectionTier.Precise);
+        var t2 = TrySelectionPattern(ownerHwnd, clipboardFileNames);
+        if (t2 != null) return new SelectionResult(t2, SelectionTier.Precise);
+        var t3 = TryFocusedElement(ownerHwnd);
+        if (t3 != null) return new SelectionResult(t3, SelectionTier.Precise);
+        return FallbackWindowRect(ownerHwnd);
     }
 
     // --------------------------------------------
@@ -227,12 +234,12 @@ internal static class SelectionLocator
     // ---- Tier 4 — Window bounding rect (guaranteed fallback) ----
     // -------------------------------------------------------------
 
-    private static Rectangle[] FallbackWindowRect(IntPtr hwnd)
+    private static SelectionResult FallbackWindowRect(IntPtr hwnd)
     {
         if (!NativeMethods.GetWindowRect(hwnd, out var rect))
-            return Array.Empty<Rectangle>();
+            return new SelectionResult(Array.Empty<Rectangle>(), SelectionTier.WindowFallback);
 
-        return new[] { rect.ToRectangle() };
+        return new SelectionResult(new[] { rect.ToRectangle() }, SelectionTier.WindowFallback);
     }
 
     // -----------------
