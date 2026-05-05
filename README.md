@@ -20,7 +20,7 @@ A system-wide Windows utility that highlights your copied selection with a soft 
 
 - **Instant copy confirmation** — soft blue glow highlights the copied selection and fades out in ~350ms
 - **System-wide monitoring** — works across any app: Notepad, Word, Visual Studio, File Explorer, and more
-- **Four-tier fallback for selection location** — UI Automation TextPattern → SelectionItemPattern → focused element → window bounding rect
+- **Four-tier fallback for selection location** — UI Automation TextPattern → SelectionItemPattern → focused element → "✓ Copied" toast near cursor (for apps that block UI Automation, e.g. Chrome, VSCode, Slack)
 - **Rate limiting** — 800ms cooldown plus a 250ms recent-input check, filtering out programmatic clipboard writes from password managers and background services
 - **Per-monitor DPI-aware** (PerMonitorV2) — correct overlay placement on HiDPI displays and multi-monitor setups
 - **Zero external NuGet dependencies** — only .NET 10 inbox libraries (WinForms + UI Automation)
@@ -84,9 +84,9 @@ WM_CLIPBOARDUPDATE
                       ├─ Tier 1: UI Automation TextPattern  (Notepad, Word, VS)
                       ├─ Tier 2: SelectionItemPattern       (Explorer multi-file, skipped for Electron)
                       ├─ Tier 3: Focused element bounding rect
-                      └─ Tier 4: Window bounding rect       (guaranteed fallback)
-                           └─ GlowOverlay.ShowOver()
-                           └─ 60fps fade over 350ms → self-dispose
+                      └─ Tier 4: "✓ Copied" toast near cursor  (Chrome, Electron — guaranteed fallback)
+                           └─ Tier 1/2/3 → GlowOverlay.ShowOver() → 60fps fade over 350ms → self-dispose
+                           └─ Tier 4      → CopiedToast.ShowNearCursor() → hold 600ms → fade 300ms → self-dispose
 ```
 
 **ClipboardMonitor** — uses the modern Vista+ `AddClipboardFormatListener` API (not the fragile `SetClipboardViewer` chain) and applies an 80ms debounce timer. The delay is necessary on Windows 11 because the clipboard owner window is not yet set at the moment `WM_CLIPBOARDUPDATE` fires.
@@ -97,7 +97,7 @@ WM_CLIPBOARDUPDATE
 
 ## Limitations
 
-- **Chrome / Edge / Electron apps** (VSCode, Slack, Discord, etc.) — the sandboxed renderer blocks UI Automation from reading the text selection, so the overlay falls back to highlighting the entire window rather than the exact copied text.
+- **Chrome / Edge / Electron apps** (VSCode, Slack, Discord, etc.) — the sandboxed renderer blocks UI Automation from reading the text selection, so a small "✓ Copied" confirmation appears near the cursor instead of highlighting the exact copied text.
 - **Requires Windows 10 version 1803 or later** — needed for `AddClipboardFormatListener`.
 - **x64 only.**
 
