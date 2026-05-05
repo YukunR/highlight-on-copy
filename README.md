@@ -28,6 +28,20 @@ A system-wide Windows utility that highlights your copied selection with a soft 
 
 ## Installation
 
+### Direct download (no dependencies)
+
+Download `HighlightOnCopy.exe` from the [latest release](https://github.com/YukunR/highlight-on-copy/releases/latest) and run it directly — no installer, no .NET SDK required.
+
+> **Windows security warning**
+> Windows may block the exe with "This app has been prevented from running" (Smart App Control) or show a SmartScreen prompt. This happens because the app is not yet code-signed.
+>
+> To run it anyway, choose one of:
+> 1. Right-click the exe → **Properties** → check **Unblock** → OK, then run
+> 2. Click **More info → Run anyway** on the SmartScreen prompt
+> 3. Use the `dotnet tool` method below (no warning)
+
+To launch automatically on login, place a shortcut to the exe in `shell:startup`, or add it to Task Scheduler.
+
 ### Via dotnet tool
 
 Requires [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
