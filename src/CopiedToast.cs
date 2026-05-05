@@ -64,7 +64,7 @@ internal sealed class CopiedToast : Form
         x = Math.Max(workArea.Left, x);
         y = Math.Max(workArea.Top, y);
 
-        var toast = new CopiedToast(new Rectangle(x, y, w, h), font.ToHfont(), w, h);
+        var toast = new CopiedToast(new Rectangle(x, y, w, h));
         toast.Show();
         toast._holdTimer.Start();
     }
@@ -73,16 +73,8 @@ internal sealed class CopiedToast : Form
     // ---- Construction ----
     // ----------------------
 
-    private readonly IntPtr _fontHandle;
-    private readonly int _width;
-    private readonly int _height;
-
-    private CopiedToast(Rectangle bounds, IntPtr fontHandle, int width, int height)
+    private CopiedToast(Rectangle bounds)
     {
-        _fontHandle = fontHandle;
-        _width = width;
-        _height = height;
-
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         Bounds = bounds;
@@ -129,7 +121,7 @@ internal sealed class CopiedToast : Form
         g.SmoothingMode = SmoothingMode.None;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        var rect = new Rectangle(1, 1, _width - 2, _height - 2);
+        var rect = new Rectangle(1, 1, ClientSize.Width - 2, ClientSize.Height - 2);
 
         using var fillBrush = new SolidBrush(FillColor);
         FillRoundedRect(g, fillBrush, rect, CornerRadius);
@@ -137,9 +129,9 @@ internal sealed class CopiedToast : Form
         using var borderPen = new Pen(BorderColor, 1.5f);
         DrawRoundedRect(g, borderPen, rect, CornerRadius);
 
-        using var font = Font.FromHfont(_fontHandle);
+        using var font = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Point);
         using var textBrush = new SolidBrush(TextColor_);
-        var format = new StringFormat
+        using var format = new StringFormat
         {
             Alignment = StringAlignment.Center,
             LineAlignment = StringAlignment.Center
