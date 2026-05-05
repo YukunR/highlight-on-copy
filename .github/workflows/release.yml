@@ -41,7 +41,6 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:Version=${{ steps.version.outputs.value }}
-          -o publish/win-x64/
 
       - name: Pack NuGet
         run: dotnet pack -c Release -p:Version=${{ steps.version.outputs.value }} --no-build
@@ -50,7 +49,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.event_name == 'push'
         with:
-          files: publish/win-x64/HighlightOnCopy.exe
+          files: bin/Release/net10.0-windows/win-x64/publish/HighlightOnCopy.exe
           generate_release_notes: true
 
       - name: Push to NuGet.org
