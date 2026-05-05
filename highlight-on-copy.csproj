@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- dotnet tool requires OutputType=Exe (console entry point).
+         The console window is immediately freed via FreeConsole() in Program.cs. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- UseWPF is needed only to reference UIAutomationClient.dll (System.Windows.Automation).
+         We never create any WPF windows — all UI is via WinForms. -->
+    <UseWPF>true</UseWPF>
+    <PlatformTarget>x64</PlatformTarget>
+    <AssemblyName>HighlightOnCopy</AssemblyName>
+    <RootNamespace>HighlightOnCopy</RootNamespace>
+    <ApplicationIcon>highlight-on-copy.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="highlight-on-copy.ico" />
+  </ItemGroup>
+
+</Project>

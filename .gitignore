@@ -1,0 +1,49 @@
+# .NET build artifacts
+bin/
+obj/
+
+# NuGet packages and publish output
+*.nupkg
+*.snupkg
+publish/
+
+# Visual Studio
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# NuGet restore caches (safety net; already covered by obj/)
+*.nuget.props
+*.nuget.targets
+project.nuget.cache
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Claude Code local settings
+.claude/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Diagnostic files
+*.dmp
+*.log
+TODO.md
+BUGS.md
+
+# icon files
+highlight_on_copy_icon.ai
+highlight_on_copy_icon.png
+highlight_on_copy_icon.svg

@@ -1,0 +1,28 @@
+{
+  "tasks": [
+    {
+      "name": "format-staged",
+      "group": "pre-commit",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".husky/format-staged.ps1"
+      ],
+      "output": "always"
+    },
+    {
+      "name": "check-comment-dividers",
+      "group": "pre-commit",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        ".husky/check-comment-dividers.ps1"
+      ],
+      "output": "always"
+    }
+  ]
+}
