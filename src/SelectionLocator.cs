@@ -61,11 +61,13 @@ internal static class SelectionLocator
             return FallbackWindowRect(visibleHwnd != IntPtr.Zero ? visibleHwnd : ownerHwnd);
         }
 
-        return
-            (TryTextPattern(ownerHwnd) is { } t1 ? new SelectionResult(t1, SelectionTier.Precise) :
-            TrySelectionPattern(ownerHwnd, clipboardFileNames) is { } t2 ? new SelectionResult(t2, SelectionTier.Precise) :
-            TryFocusedElement(ownerHwnd) is { } t3 ? new SelectionResult(t3, SelectionTier.Precise) :
-            FallbackWindowRect(ownerHwnd));
+        var t1 = TryTextPattern(ownerHwnd);
+        if (t1 != null) return new SelectionResult(t1, SelectionTier.Precise);
+        var t2 = TrySelectionPattern(ownerHwnd, clipboardFileNames);
+        if (t2 != null) return new SelectionResult(t2, SelectionTier.Precise);
+        var t3 = TryFocusedElement(ownerHwnd);
+        if (t3 != null) return new SelectionResult(t3, SelectionTier.Precise);
+        return FallbackWindowRect(ownerHwnd);
     }
 
     // --------------------------------------------
