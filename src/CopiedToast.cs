@@ -130,7 +130,7 @@ internal sealed class CopiedToast : Form
         DrawRoundedRect(g, borderPen, rect, CornerRadius);
 
         using var font = new Font("Segoe UI", 11f, FontStyle.Regular, GraphicsUnit.Point);
-        using var textBrush = new SolidBrush(TextColor_);
+        using var textBrush = new SolidBrush(TextColor);
         using var format = new StringFormat
         {
             Alignment = StringAlignment.Center,
