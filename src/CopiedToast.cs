@@ -18,7 +18,7 @@ internal sealed class CopiedToast : Form
 {
     private static readonly Color FillColor = Color.FromArgb(255, 74, 157, 232);
     private static readonly Color BorderColor = Color.FromArgb(255, 255, 255, 255);
-    private static readonly Color TextColor_ = Color.FromArgb(255, 255, 255, 255);
+    private static readonly Color TextColor = Color.FromArgb(255, 255, 255, 255);
     private static readonly Color TransparentHole = Color.Fuchsia;
 
     private const string ToastText = "✓  Copied";
