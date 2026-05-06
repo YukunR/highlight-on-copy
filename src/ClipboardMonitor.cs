@@ -39,9 +39,10 @@ internal sealed class ClipboardMonitor : NativeWindow, IDisposable
         // to the Windows message pump that Application.Run() drives.
         CreateHandle(new CreateParams { Parent = HWND_MESSAGE });
 
-        System.Diagnostics.Debug.Assert(
-            NativeMethods.AddClipboardFormatListener(Handle),
-            "AddClipboardFormatListener failed");
+        if (!NativeMethods.AddClipboardFormatListener(Handle))
+            throw new InvalidOperationException(
+                $"AddClipboardFormatListener failed (Handle={Handle}, " +
+                $"Win32Error={System.Runtime.InteropServices.Marshal.GetLastWin32Error()})");
 
         // WinForms Timer runs on the UI thread — safe to update UI from its Tick handler.
         _delayTimer = new System.Windows.Forms.Timer { Interval = 80 };
